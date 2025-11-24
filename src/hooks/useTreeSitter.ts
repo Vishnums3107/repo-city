@@ -10,20 +10,28 @@ export const useTreeSitter = (languagePath: string = '/tree-sitter-javascript.wa
   useEffect(() => {
     const init = async () => {
       try {
+        // Resolve paths relative to the base URL (for GitHub Pages)
+        const resolvePath = (path: string) => {
+            const base = import.meta.env.BASE_URL;
+            const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+            return `${base}${cleanPath}`;
+        };
+
         // Initialize web-tree-sitter
         // We point to the wasm file in the public directory
         await Parser.init({
           locateFile(scriptName: string) {
-            return '/' + scriptName;
+            return resolvePath(scriptName);
           },
         });
 
         const parser = new Parser();
         
         // Load the language using window.fetch as requested
-        const response = await window.fetch(languagePath);
+        const resolvedLangPath = resolvePath(languagePath);
+        const response = await window.fetch(resolvedLangPath);
         if (!response.ok) {
-            throw new Error(`Failed to fetch language file: ${languagePath}`);
+            throw new Error(`Failed to fetch language file: ${resolvedLangPath} (Status: ${response.status})`);
         }
         const bytes = await response.arrayBuffer();
         const lang = await Language.load(new Uint8Array(bytes));
